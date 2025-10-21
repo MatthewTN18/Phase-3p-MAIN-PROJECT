@@ -8,5 +8,4 @@ class Customer(Base):
     id = Column(Integer, primary_key=True)
     email = Column(String(255))
     phone = Column(String(20))
-    loyalty_points = Column(Integer, default=0)
     created_at = Column(DateTime, default=func.now())

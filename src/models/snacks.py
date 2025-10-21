@@ -6,8 +6,7 @@ class Snack(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
-    category = Column(String(100))  # popcorn, drinks, candy, nachos, soda
+    category = Column(String(100))  # popcorn, drinks, candy, nachos
     price = Column(Float, nullable=False)
     stock_quantity = Column(Integer, default=0)
-    min_stock_level = Column(Integer, default=10)
     is_available = Column(Boolean, default=True)

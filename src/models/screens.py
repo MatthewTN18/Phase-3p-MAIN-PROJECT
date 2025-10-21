@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String
 from .orm_db import Base
 
 class Screen(Base):
@@ -7,5 +7,4 @@ class Screen(Base):
     id = Column(Integer, primary_key=True)
     number = Column(Integer, nullable=False, unique=True)
     capacity = Column(Integer)
-    screen_type = Column(String(50))  # IMAX, Standard, or VIP
-    is_operational = Column(Boolean, default=True)
+    screen_type = Column(String(50))  # IMAX, Standard, VIP

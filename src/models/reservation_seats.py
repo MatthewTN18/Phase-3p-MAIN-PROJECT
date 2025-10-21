@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey
 from .orm_db import Base
 
 class ReservationSeat(Base):
@@ -7,4 +7,3 @@ class ReservationSeat(Base):
     id = Column(Integer, primary_key=True)
     reservation_id = Column(Integer, ForeignKey('reservations.id'), nullable=False)
     seat_id = Column(Integer, ForeignKey('seats.id'), nullable=False)
-    final_price = Column(Float, nullable=False)
