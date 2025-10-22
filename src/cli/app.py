@@ -48,7 +48,6 @@ class CinemaKiosk:
                 print("   No upcoming showtimes")
     
     def display_seat_map(self, seats):
-        
         if not seats:
             print("No seats available.")
             return
@@ -67,7 +66,6 @@ class CinemaKiosk:
         print(" " * 8 + "─" * 20)
         print()
         
-       
         for row_letter, row_seats in sorted_rows:
             print(f"{row_letter} ", end="")
             for seat in sorted(row_seats, key=lambda s: s.seat_number):
@@ -82,7 +80,7 @@ class CinemaKiosk:
             print(f" {i}  ", end="")
         print()
         
-        print("\nLegend: [ ] = Available, [X] = Taken")
+        print("\nKey map: [ ] = Available, [X] = Taken")
     
     def handle_movie_browsing(self):
         print("\n--- Browse Movies ---")
@@ -188,7 +186,7 @@ class CinemaKiosk:
             return None
     
     def handle_seat_selection(self, showtime, selected_seats):
-       
+        """Complete booking process with confirmation and ticket generation"""
         print(f"\nSelected {len(selected_seats)} seats:")
         for seat in selected_seats:
             print(f"  - {seat.row_letter}{seat.seat_number}")
@@ -196,12 +194,63 @@ class CinemaKiosk:
         total_price = showtime.base_price * len(selected_seats)
         print(f"Total: ${total_price:.2f}")
         
-        print("\nFeature under development - booking confirmation coming soon!")
-        input("Press Enter to continue...")
+        # Get customer email
+        while True:
+            print("\nEnter your email for tickets:")
+            customer_email = input("Email: ").strip()
+
+            if customer_email: 
+                break
+            else:
+                print("Email is required. Please enter your email.")
+
+
+        # Confirm booking
+        print(f"\nConfirm booking for ${total_price:.2f}? (yes/no)")
+        confirmation = input("Confirm: ").strip().lower()
+        
+        if confirmation in ['yes', 'y']:
+            # Create reservation
+            seat_ids = [seat.id for seat in selected_seats]
+            reservation, tickets = self.booking_service.create_reservation(
+                showtime.id, seat_ids, customer_email
+            )
+            
+            if reservation and tickets:
+                self.display_booking_confirmation(reservation, tickets)
+            else:
+                print("Booking failed. Please try again.")
+        else:
+            print("Booking cancelled.")
+        
+        input("\nPress Enter to continue...")
+    
+    def display_booking_confirmation(self, reservation, tickets):
+        """Display booking confirmation with ticket details"""
+        print("\n" + "=" * 40)
+        print("      BOOKING CONFIRMED!")
+        print("=" * 40)
+        
+        # Get showtime details
+        showtime = reservation.showtime
+        movie = showtime.movie
+        
+        print(f"\nMovie: {movie.title}")
+        print(f"Showtime: {showtime.show_date} at {showtime.show_time}")
+        print(f"Total Paid: ${reservation.total_amount:.2f}")
+        
+        print(f"\nYour Tickets ({len(tickets)}):")
+        for ticket in tickets:
+            seat = ticket.seat
+            print(f"  - {ticket.ticket_number} (Seat {seat.row_letter}{seat.seat_number})")
+        
+        if reservation.customer:
+            print(f"\nTickets sent to: {reservation.customer.email}")
+        
+        print("\nThank you for your purchase! Enjoy the movie! ")
     
     def handle_reservation(self):
         print("\n--- Make Reservation ---")
-        
         self.handle_movie_browsing()
     
     def handle_view_tickets(self):
