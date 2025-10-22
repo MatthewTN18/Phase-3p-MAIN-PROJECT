@@ -47,13 +47,47 @@ class CinemaKiosk:
             else:
                 print("   No upcoming showtimes")
     
+    def display_seat_map(self, seats):
+        
+        if not seats:
+            print("No seats available.")
+            return
+        
+        # Group seats by row
+        rows = {}
+        for seat in seats:
+            if seat.row_letter not in rows:
+                rows[seat.row_letter] = []
+            rows[seat.row_letter].append(seat)
+        
+        # Sort rows alphabetically
+        sorted_rows = sorted(rows.items())
+        
+        print("\n" + " " * 10 + "SCREEN")
+        print(" " * 8 + "─" * 20)
+        print()
+        
+       
+        for row_letter, row_seats in sorted_rows:
+            print(f"{row_letter} ", end="")
+            for seat in sorted(row_seats, key=lambda s: s.seat_number):
+                symbol = "[ ]" if seat.is_available_for_showtime else "[X]"
+                print(f"{symbol} ", end="")
+            print()
+        
+        # Display seat numbers
+        print("  ", end="")
+        max_seats = max(len(seats) for seats in rows.values())
+        for i in range(1, max_seats + 1):
+            print(f" {i}  ", end="")
+        print()
+        
+        print("\nLegend: [ ] = Available, [X] = Taken")
+    
     def handle_movie_browsing(self):
         print("\n--- Browse Movies ---")
         
-        # Get movies from database
         movies = self.movie_service.get_now_showing()
-        
-        # Display movies
         self.display_movies(movies)
         
         if movies:
@@ -75,12 +109,100 @@ class CinemaKiosk:
     def handle_movie_selection(self, movie):
         """Handle when a user selects a specific movie"""
         print(f"\n--- {movie.title} ---")
-        print("Movie selection feature coming soon!")
-        # TODO: Implement seat selection and booking flow
+        
+        # Get showtimes for this movie
+        showtimes = self.movie_service.get_showtimes_for_movie(movie.id)
+        if not showtimes:
+            print("No showtimes available for this movie.")
+            return
+        
+        # Display showtimes
+        print("Available showtimes:")
+        for i, st in enumerate(showtimes, 1):
+            print(f"{i}. {st.show_date} at {st.show_time} ({st.available_seats} seats available)")
+        
+        print("\nSelect a showtime or 'back' to return.")
+        choice = input("Your choice: ").strip().lower()
+        
+        if choice != 'back':
+            try:
+                showtime_index = int(choice) - 1
+                if 0 <= showtime_index < len(showtimes):
+                    self.handle_showtime_selection(showtimes[showtime_index])
+                else:
+                    print("Invalid showtime selection.")
+            except ValueError:
+                print("Please enter a valid number or 'back'.")
+    
+    def handle_showtime_selection(self, showtime):
+        """Handle when a user selects a specific showtime"""
+        print(f"\n--- {showtime.movie.title} at {showtime.show_time} ---")
+        
+        # Get available seats
+        seats = self.booking_service.get_available_seats(showtime.id)
+        
+        # Display seat map
+        self.display_seat_map(seats)
+        
+        if seats:
+            print("\nSelect seats (e.g., 'A1 A2 B3' or 'back' to return):")
+            choice = input("Your choice: ").strip().lower()
+            
+            if choice != 'back':
+                selected_seats = self.parse_seat_selection(choice, seats)
+                if selected_seats:
+                    self.handle_seat_selection(showtime, selected_seats)
+                else:
+                    print("Invalid seat selection.")
+    
+    def parse_seat_selection(self, input_str, available_seats):
+        """Parse seat selection input like 'A1 A2 B3'"""
+        try:
+            selections = input_str.upper().split()
+            selected_seats = []
+            
+            for selection in selections:
+                # Parse format e.g "A1", "B5"
+                row_letter = selection[0]
+                seat_number = int(selection[1:])
+                
+                # Find matching seat
+                matching_seat = None
+                for seat in available_seats:
+                    if (seat.row_letter == row_letter and 
+                        seat.seat_number == seat_number and 
+                        seat.is_available_for_showtime):
+                        matching_seat = seat
+                        break
+                
+                if matching_seat:
+                    selected_seats.append(matching_seat)
+                else:
+                    print(f"Seat {selection} is not available or invalid.")
+                    return None
+            
+            return selected_seats
+            
+        except (ValueError, IndexError):
+            print("Invalid seat format. Use format like 'A1 A2 B3'")
+            return None
+    
+    def handle_seat_selection(self, showtime, selected_seats):
+       
+        print(f"\nSelected {len(selected_seats)} seats:")
+        for seat in selected_seats:
+            print(f"  - {seat.row_letter}{seat.seat_number}")
+        
+        total_price = showtime.base_price * len(selected_seats)
+        print(f"Total: ${total_price:.2f}")
+        
+        print("\nFeature under development - booking confirmation coming soon!")
+        input("Press Enter to continue...")
     
     def handle_reservation(self):
         print("\n--- Make Reservation ---")
-        pass
+        
+        self.handle_movie_browsing()
     
     def handle_view_tickets(self):
         print("\n--- My Tickets ---")
