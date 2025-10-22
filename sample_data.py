@@ -41,9 +41,10 @@ def create_basic_sample_data():
         session.flush()
         print("Created 1 screen")
         
-        # Create a few seats for testing
+        # Create 50 seats for the screen
         seats = []
-        for row in ['A', 'B']:
+        rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+        for row in rows:
             for seat_num in range(1, 6):  # 5 seats per row
                 seats.append(Seat(
                     screen_id=screens[0].id,
@@ -54,7 +55,7 @@ def create_basic_sample_data():
                 ))
         session.add_all(seats)
         session.flush()
-        print("Created 10 seats")
+        print("Created 50 seats")
         
         # create 2 showtimes 
         from datetime import datetime, timedelta
