@@ -60,12 +60,14 @@ def create_basic_sample_data():
         from datetime import datetime, timedelta
         showtimes = []
         today = datetime.now().strftime("%Y-%m-%d")
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        
         
         showtimes.append(Showtime(
             movie_id=movies[0].id,  # Oppenheimer
             screen_id=screens[0].id,
             show_time="14:30",
-            show_date=today,
+            show_date=today,  
             base_price=12.00,
             available_seats=50
         ))
@@ -74,14 +76,24 @@ def create_basic_sample_data():
             movie_id=movies[1].id,  # It
             screen_id=screens[0].id,
             show_time="19:00", 
-            show_date=today,
+            show_date=today,  
+            base_price=12.00,
+            available_seats=50
+        ))
+        
+        
+        showtimes.append(Showtime(
+            movie_id=movies[0].id,  # Oppenheimer
+            screen_id=screens[0].id,
+            show_time="16:00",
+            show_date=tomorrow,  
             base_price=12.00,
             available_seats=50
         ))
         
         session.add_all(showtimes)
         session.flush()
-        print("Created 2 showtimes for today")
+        print("Created showtimes for today and tomorrow")
         
         # 3 basic snacks
         snacks = [
@@ -92,16 +104,11 @@ def create_basic_sample_data():
         session.add_all(snacks)
         print("Created 3 snacks")
         
-        # Commit 
+        
         session.commit()
         
         print("\nBasic sample data created successfully")
-        print("\nCurrent stats:")
-        print(f"   Movies: {len(movies)}")
-        print(f"   Screens: {len(screens)}") 
-        print(f"   Seats: {len(seats)}")
-        print(f"   Showtimes: {len(showtimes)}")
-        print(f"   Snacks: {len(snacks)}")
+        print(f"Showtimes created for: {today} and {tomorrow}")
         
     except Exception as e:
         session.rollback()
