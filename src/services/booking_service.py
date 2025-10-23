@@ -2,7 +2,7 @@
 Booking service handling reservation operations
 """
 
-from src.models import Seat, Reservation, ReservationSeat, Showtime, Ticket
+from src.models import Seat, Reservation, ReservationSeat, Showtime, Ticket, Snack, SnackOrder
 from sqlalchemy.orm import joinedload
 import random
 import string
@@ -21,18 +21,15 @@ class BookingService:
     def get_available_seats(self, showtime_id):
         """Get available seats for a specific showtime"""
         try:
-            
             showtime = self.session.query(Showtime).filter(Showtime.id == showtime_id).first()
             if not showtime:
                 return []
             
-            # Get all seats for this screen
             all_seats = (self.session.query(Seat)
                         .filter(Seat.screen_id == showtime.screen_id)
                         .order_by(Seat.row_letter, Seat.seat_number)
                         .all())
             
-            # Get seats that are already reserved 
             reserved_seat_ids = (
                 self.session.query(ReservationSeat.seat_id)
                 .join(Reservation)
@@ -42,7 +39,6 @@ class BookingService:
             )
             reserved_seat_ids = [seat_id for (seat_id,) in reserved_seat_ids]
             
-            # Mark availability
             for seat in all_seats:
                 seat.is_available_for_showtime = seat.id not in reserved_seat_ids
             
@@ -52,17 +48,31 @@ class BookingService:
             print(f"Error getting available seats: {e}")
             return []
     
-    def create_reservation(self, showtime_id, seat_ids, customer_email=None):
-        """Create a new reservation with tickets"""
+    def get_available_snacks(self):
+        """Get all available snacks"""
         try:
-            # Get showtime to calculate total
+            snacks = (self.session.query(Snack)
+                     .filter(Snack.is_available == True)
+                     .filter(Snack.stock_quantity > 0)
+                     .order_by(Snack.name)
+                     .all())
+            return snacks
+        except Exception as e:
+            print(f"Error getting snacks: {e}")
+            return []
+    
+    def create_reservation(self, showtime_id, seat_ids, customer_email=None, snack_orders=None):
+        """Create a new reservation with tickets and optional snacks"""
+        try:
+            if snack_orders is None:
+                snack_orders = {}
+                
             showtime = self.session.query(Showtime).filter(Showtime.id == showtime_id).first()
             if not showtime:
-                return None, "Showtime not found"
+                return None, [], "Showtime not found"
             
-            # Create customer record 
             customer_id = None
-            if customer_email and customer_email.lower() != 'guest':
+            if customer_email:
                 from src.models import Customer
                 customer = self.session.query(Customer).filter(Customer.email == customer_email).first()
                 if not customer:
@@ -71,10 +81,8 @@ class BookingService:
                     self.session.flush()
                 customer_id = customer.id
             
-            # Calculate total (base_price * number of seats)
             total_amount = showtime.base_price * len(seat_ids)
             
-            # Create reservation
             reservation = Reservation(
                 showtime_id=showtime_id,
                 customer_id=customer_id,
@@ -82,19 +90,16 @@ class BookingService:
                 status='confirmed'
             )
             self.session.add(reservation)
-            self.session.flush()  # Get the reservation ID
+            self.session.flush()
             
-            # Create reservation_seat records and tickets
             tickets = []
             for seat_id in seat_ids:
-                # Create reservation_seat record
                 reservation_seat = ReservationSeat(
                     reservation_id=reservation.id,
                     seat_id=seat_id
                 )
                 self.session.add(reservation_seat)
                 
-                # Create ticket
                 ticket = Ticket(
                     reservation_id=reservation.id,
                     seat_id=seat_id,
@@ -104,16 +109,37 @@ class BookingService:
                 self.session.add(ticket)
                 tickets.append(ticket)
             
-            # Update available seats count
+            snack_total = 0
+            snack_details = []
+            
+            for snack_id, quantity in snack_orders.items():
+                snack = self.session.query(Snack).filter(Snack.id == snack_id).first()
+                if snack and snack.stock_quantity >= quantity:
+                    subtotal = snack.price * quantity
+                    snack_order = SnackOrder(
+                        reservation_id=reservation.id,
+                        snack_id=snack_id,
+                        quantity=quantity,
+                        unit_price=snack.price,
+                        subtotal=subtotal
+                    )
+                    self.session.add(snack_order)
+                    snack.stock_quantity -= quantity
+                    snack_total += subtotal
+                    snack_details.append(f"{quantity}x {snack.name}")
+            
+            total_amount += snack_total
+            reservation.total_amount = total_amount
+            
             showtime.available_seats -= len(seat_ids)
             
             self.session.commit()
-            return reservation, tickets
+            return reservation, tickets, snack_details
             
         except Exception as e:
             self.session.rollback()
             print(f"Error creating reservation: {e}")
-            return None, f"Booking failed: {e}"
+            return None, [], f"Booking failed: {e}"
     
     def are_seats_available(self, showtime_id, seat_ids):
         """Check if specific seats are available for a showtime"""
