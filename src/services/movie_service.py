@@ -12,11 +12,10 @@ class MovieService:
     def get_now_showing(self, days=7):
         """Get movies showing in the next few days - INCLUDING TODAY"""
         try:
-            # Start from today (not tomorrow)
+            # Starting from today 
             today = datetime.now().date()
             end_date = today + timedelta(days=days)
             
-            # Query movies that have showtimes in the date range (INCLUDING today)
             movies = (self.session.query(Movie)
                      .join(Showtime)
                      .filter(Showtime.show_date >= today.strftime('%Y-%m-%d'))
@@ -43,7 +42,7 @@ class MovieService:
             query = query.filter(Showtime.show_date >= today)
             
             if date:
-                # Also filter by specific date if provided
+                # filter by specific date
                 query = query.filter(Showtime.show_date == date)
             
             # Order by date and time
